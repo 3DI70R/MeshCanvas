@@ -1,0 +1,10 @@
+{
+    "name": "ru.threedisevenzeror.meshcanvas",
+    "displayName": "Mesh Canvas",
+    "version": "0.1",
+    "unity": "2018.1",
+    "description": "GPU Powered mesh painting",
+    "keywords": ["Rendering", "Painting"],
+    "category": "Painting"
+}
+
