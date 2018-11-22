@@ -147,35 +147,73 @@ namespace ThreeDISevenZeroR.MCanvas
             {
                 Debug.LogWarningFormat("Cannot add skinned mesh renderer to MeshCanvas, " +
                                        "layer \"{0}\" not defined, it will be used for world texture baking", 
-                    positionBakeLayerName);
+                                       positionBakeLayerName);
             }
         }
 
         /// <summary>
-        /// Paints specified brush texture onto target texture using position/rotation/size
+        /// Paint specified brush on target RenderTexture using world position of this canvas
         /// </summary>
         /// <param name="target">Target render texture, which will receive painting operation result</param>
-        /// <param name="brush">Texture that will be applied to target texture</param>
-        /// <param name="position">Decal position in world space</param>
-        /// <param name="rotation">Decal rotation in world space</param>
-        /// <param name="size">Decal size in world space</param>
-        public void Paint(RenderTexture target, Texture brush, Color color,
+        /// <param name="brush">Paint brush parameters that will be used to draw shapes</param>
+        /// <param name="color">Color override for brush, will be multiplied by brush color</param>
+        /// <param name="position">Position at which decal should be painted</param>
+        /// <param name="rotation">Rotation for this decal, will be combined with default rotation specified in brush</param>
+        /// <param name="size">Size for this decal, will be combined with default size specified in brush</param>
+        public void Paint(RenderTexture target, BrushParams brush, Color color,
             Vector3 position, Quaternion rotation, Vector3 size)
         {
             if (isDisposed)
             {
-                Debug.LogError("Cannot draw decal, MeshCanvas is disposed");
+                Debug.LogError("Cannot paint on MeshCanvas, MeshCanvas is disposed");
                 return;
             }
             
             UpdatePositionIfDirty();
-            
-            decalPaintMaterial.Value.SetMatrix("_DecalMatrix", Matrix4x4.TRS(position, rotation, size).inverse);
-            //decalPaintMaterial.Value.SetVector("_Skew", fromPosition - toPosition);
-            decalPaintMaterial.Value.mainTexture = brush;
-            decalPaintMaterial.Value.color = color;
 
-            Graphics.Blit(null, target, decalPaintMaterial.Value);
+            var brushMatrix = Matrix4x4.TRS(position, rotation * brush.rotation, Vector3.Scale(size, brush.size));
+            decalPaintMaterial.Value.SetMatrix("_DecalMatrix", brushMatrix.inverse);
+            decalPaintMaterial.Value.SetVector("_SmoothingMin", brush.smoothingStart * 0.5f);
+            decalPaintMaterial.Value.SetVector("_SmoothingMax", brush.smoothingEnd * 0.5f);
+            decalPaintMaterial.Value.color = color * brush.color;
+            
+            Graphics.Blit(brush.texture, target, decalPaintMaterial.Value);
+        }
+        
+        /// <summary>
+        /// <inheritdoc cref="Paint(UnityEngine.RenderTexture,BrushParams,UnityEngine.Color,UnityEngine.Vector3,UnityEngine.Quaternion,UnityEngine.Vector3)"/><br/> 
+        /// <see cref="Paint(UnityEngine.RenderTexture,BrushParams,UnityEngine.Color,UnityEngine.Vector3,UnityEngine.Quaternion,UnityEngine.Vector3)"/>
+        /// </summary>
+        public void Paint(RenderTexture target, BrushParams brush,Vector3 position)
+        {
+            Paint(target, brush, Color.white, position);
+        }
+        
+        /// <summary>
+        /// <inheritdoc cref="Paint(UnityEngine.RenderTexture,BrushParams,UnityEngine.Color,UnityEngine.Vector3,UnityEngine.Quaternion,UnityEngine.Vector3)"/><br/> 
+        /// <see cref="Paint(UnityEngine.RenderTexture,BrushParams,UnityEngine.Color,UnityEngine.Vector3,UnityEngine.Quaternion,UnityEngine.Vector3)"/>
+        /// </summary>
+        public void Paint(RenderTexture target, BrushParams brush, Color color, Vector3 position)
+        {
+            Paint(target, brush, color, position, Quaternion.identity);
+        }
+        
+        /// <summary>
+        /// <inheritdoc cref="Paint(UnityEngine.RenderTexture,BrushParams,UnityEngine.Color,UnityEngine.Vector3,UnityEngine.Quaternion,UnityEngine.Vector3)"/><br/> 
+        /// <see cref="Paint(UnityEngine.RenderTexture,BrushParams,UnityEngine.Color,UnityEngine.Vector3,UnityEngine.Quaternion,UnityEngine.Vector3)"/>
+        /// </summary>
+        public void Paint(RenderTexture target, BrushParams brush, Vector3 position, Quaternion rotation)
+        {
+            Paint(target, brush, Color.white, position, rotation);
+        }
+        
+        /// <summary>
+        /// <inheritdoc cref="Paint(UnityEngine.RenderTexture,BrushParams,UnityEngine.Color,UnityEngine.Vector3,UnityEngine.Quaternion,UnityEngine.Vector3)"/><br/> 
+        /// <see cref="Paint(UnityEngine.RenderTexture,BrushParams,UnityEngine.Color,UnityEngine.Vector3,UnityEngine.Quaternion,UnityEngine.Vector3)"/>
+        /// </summary>
+        public void Paint(RenderTexture target, BrushParams brush, Color color, Vector3 position, Quaternion rotation)
+        {
+            Paint(target, brush, color, position, rotation);
         }
         
         private void UpdatePositionIfDirty()

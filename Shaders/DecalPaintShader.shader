@@ -2,10 +2,11 @@
 {
     Properties
     {
-        _PositionTex ("Position", 2D) = "black" {}
-        _MainTex("Brush Tex", 2D) = "black" {}
+        _PositionTex ("Position Texture", 2D) = "black" {}
+        _MainTex("Brush Texture", 2D) = "black" {}
         _Color("Brush Color", Color) = (1, 1, 1, 1)
-        _Skew("Skew", Vector) = (0, 0, 0, 0)
+        _SmoothingMin("Smoothing Min (XYZ)", Vector) = (0.45, 0.45, 0.1, 0)
+        _SmoothingMax("Smoothing Max (XYZ)", Vector) = (0.5, 0.5, 0.5, 0.5)
     }
     SubShader
     {
@@ -44,18 +45,20 @@
             sampler2D _MainTex;
             float4x4 _DecalMatrix;
             half4 _Color;
-            half3 _Skew;
+            half3 _SmoothingMin;
+            half3 _SmoothingMax;
 
             half4 frag (v2f i) : SV_Target
             {
-                float3 pos = tex2D(_PositionTex, i.uv);
-                float3 decalPos = mul(_DecalMatrix, float4(pos, 1)).xyz;
-                decalPos += _Skew * decalPos.z;
-                
-                clip (float3(0.5,0.5,0.5) - abs(decalPos));
+                half3 pos = tex2D(_PositionTex, i.uv);
+                half3 decalPos = mul(_DecalMatrix, float4(pos, 1)).xyz;
+                half3 absDecalPos = abs(decalPos);
 
+                clip(_SmoothingMax - absDecalPos);
+
+                half3 mixed = 1 - smoothstep(_SmoothingMin, _SmoothingMax, absDecalPos);
                 half4 decalColor = tex2D(_MainTex, decalPos.xy + 0.5) * _Color;
-                decalColor.a *= 1 - abs(decalPos.z * 2);
+                decalColor.a *= mixed.x * mixed.y * mixed.z;
                 
                 return decalColor;
             }
